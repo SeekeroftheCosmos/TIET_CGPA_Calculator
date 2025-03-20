@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>CGPA & SGPA Calculator (Supabase)</title>
+  <title>CGPA & SGPA Calculator (TIET)</title>
   <script type="module">
-    // Import the Supabase client from a CDN
+    /* 1) Import the Supabase client from a CDN */
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    // Replace with your actual Supabase project details:
+    /* 2) Replace with your actual Supabase project details */
     const supabaseUrl = 'https://nnmkmfgcjlnitdothxrn.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ubWttZmdjamxuaXRkb3RoeHJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI0NjcxODIsImV4cCI6MjA1ODA0MzE4Mn0.8EXHTIICH5UvmRsR6aEtDMRQ7tAP96uGgJ_PBnK7ZBQ';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Mapping of grades to grade points
+    /* 3) Mapping of grades to grade points */
     const gradePoints = { "A": 10, "A-": 9, "B": 8, "B-": 7, "C": 6, "E": 2, "I": 0 };
 
-    // Function to add a course using Supabase
+    /* 4) addCourse(): Insert a new course into Supabase */
     async function addCourse() {
       console.log("addCourse() called");
       const name = document.getElementById("courseName").value;
@@ -30,28 +30,32 @@
 
       try {
         const { data, error } = await supabase
-          .from('courses')
+          .from("courses")
           .insert([{ name, code, credit, semester, grade }]);
         if (error) throw error;
+
         console.log("Course added successfully:", data);
-        // Clear form inputs
+
+        // Clear form
         document.getElementById("courseName").value = "";
         document.getElementById("courseCode").value = "";
         document.getElementById("courseCredit").value = "";
         document.getElementById("semesterCode").value = "";
         document.getElementById("grade").selectedIndex = 0;
+
+        // Reload courses
         loadCourses();
       } catch (err) {
         console.error("Error adding course:", err);
       }
     }
 
-    // Function to load courses and update CGPA/SGPA displays
+    /* 5) loadCourses(): Fetch courses & calculate CGPA/SGPA */
     async function loadCourses() {
       try {
         const { data: courses, error } = await supabase
-          .from('courses')
-          .select('*');
+          .from("courses")
+          .select("*");
         if (error) throw error;
         console.log("Loaded courses:", courses);
 
@@ -59,30 +63,32 @@
         let semesterData = {};  // For SGPA: accumulate credits and points per semester
 
         courses.forEach(course => {
-          // For SGPA: accumulate if grade is not "I"
+          // SGPA data (ignore grade "I")
           if (!semesterData[course.semester]) {
             semesterData[course.semester] = { credits: 0, points: 0 };
           }
           if (course.grade !== "I") {
-            let gp = gradePoints[course.grade] || 0;
+            const gp = gradePoints[course.grade] || 0;
             semesterData[course.semester].credits += course.credit;
             semesterData[course.semester].points += gp * course.credit;
           }
-          // For CGPA: track best attempt per course code (excluding grade "I")
+
+          // CGPA data: best attempt per course code (ignore "I")
           if (course.grade !== "I") {
-            let gp = gradePoints[course.grade] || 0;
+            const gp = gradePoints[course.grade] || 0;
             if (!bestAttempts[course.code] || gp > gradePoints[bestAttempts[course.code].grade]) {
               bestAttempts[course.code] = course;
             }
           }
         });
 
-        // Calculate overall CGPA using best attempts
+        // Calculate overall CGPA
         let totalCredits = 0, totalPoints = 0;
         for (let code in bestAttempts) {
-          let course = bestAttempts[course.code] || bestAttempts[code];
+          const course = bestAttempts[code];  // Access by loop variable 'code'
+          const gp = gradePoints[course.grade] || 0;
           totalCredits += course.credit;
-          totalPoints += gradePoints[course.grade] * course.credit;
+          totalPoints += gp * course.credit;
         }
         const cgpa = totalCredits ? (totalPoints / totalCredits).toFixed(2) : "N/A";
         document.getElementById("cgpa").innerText = cgpa;
@@ -113,13 +119,13 @@
       }
     }
 
-    // Function to delete a course from Supabase
+    /* 6) deleteCourse(): Remove a course from Supabase by ID */
     async function deleteCourse(id) {
       try {
         const { error } = await supabase
-          .from('courses')
+          .from("courses")
           .delete()
-          .eq('id', id);
+          .eq("id", id);
         if (error) throw error;
         loadCourses();
       } catch (err) {
@@ -127,12 +133,12 @@
       }
     }
 
-    // Expose functions for inline usage
+    // Expose functions globally for inline usage
     window.addCourse = addCourse;
     window.deleteCourse = deleteCourse;
     window.loadCourses = loadCourses;
 
-    // Load courses on page load
+    // Load courses when the page loads
     window.onload = loadCourses;
   </script>
   <style>
@@ -147,7 +153,7 @@
 </head>
 <body>
   <h2>CGPA & SGPA Calculator (Supabase)</h2>
-  <!-- Use inline event handler; we exposed addCourse on window -->
+  <!-- Use inline event handler; we exposed addCourse() on window -->
   <form onsubmit="event.preventDefault(); addCourse();">
     <label for="courseName">Course Name:</label>
     <input type="text" id="courseName" required><br>
@@ -174,11 +180,11 @@
     
     <button type="submit">Add Course</button>
   </form>
-  
+
   <h3>Overall CGPA: <span id="cgpa">N/A</span></h3>
   <h3>SGPA by Semester:</h3>
   <div id="sgpa"></div>
-  
+
   <h3>Course List</h3>
   <table>
     <tr>
