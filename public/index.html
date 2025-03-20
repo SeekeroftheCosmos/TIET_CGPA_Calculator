@@ -1,20 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>CGPA & SGPA Calculator </title>
+  <title>CGPA & SGPA Calculator</title>
   <script type="module">
-    /* 1) Import the Supabase client from a CDN */
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    /* 2) Replace with your actual Supabase project details */
+    // IMPORTANT: Use quotes around your URL & key
     const supabaseUrl = 'https://nnmkmfgcjlnitdothxrn.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ubWttZmdjamxuaXRkb3RoeHJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI0NjcxODIsImV4cCI6MjA1ODA0MzE4Mn0.8EXHTIICH5UvmRsR6aEtDMRQ7tAP96uGgJ_PBnK7ZBQ';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    /* 3) Mapping of grades to grade points */
     const gradePoints = { "A": 10, "A-": 9, "B": 8, "B-": 7, "C": 6, "E": 2, "I": 0 };
 
-    /* 4) addCourse(): Insert a new course into Supabase */
     async function addCourse() {
       console.log("addCourse() called");
       const name = document.getElementById("courseName").value;
@@ -36,7 +33,7 @@
 
         console.log("Course added successfully:", data);
 
-        // Clear form
+        // Clear the form
         document.getElementById("courseName").value = "";
         document.getElementById("courseCode").value = "";
         document.getElementById("courseCredit").value = "";
@@ -50,7 +47,6 @@
       }
     }
 
-    /* 5) loadCourses(): Fetch courses & calculate CGPA/SGPA */
     async function loadCourses() {
       console.log("loadCourses() called");
       try {
@@ -58,13 +54,14 @@
           .from("courses")
           .select("*");
         if (error) throw error;
+
         console.log("Loaded courses:", courses);
 
-        let bestAttempts = {};  // For overall CGPA: best attempt per course code
-        let semesterData = {};  // For SGPA: accumulate credits and points per semester
+        let bestAttempts = {};
+        let semesterData = {};
 
         courses.forEach(course => {
-          // SGPA data (ignore grade "I")
+          // SGPA
           if (!semesterData[course.semester]) {
             semesterData[course.semester] = { credits: 0, points: 0 };
           }
@@ -74,7 +71,7 @@
             semesterData[course.semester].points += gp * course.credit;
           }
 
-          // CGPA data: best attempt per course code (ignore "I")
+          // CGPA
           if (course.grade !== "I") {
             const gp = gradePoints[course.grade] || 0;
             if (!bestAttempts[course.code] || gp > gradePoints[bestAttempts[course.code].grade]) {
@@ -83,7 +80,7 @@
           }
         });
 
-        // Calculate overall CGPA
+        // Calculate Overall CGPA
         let totalCredits = 0, totalPoints = 0;
         for (let code in bestAttempts) {
           const course = bestAttempts[code];
@@ -94,21 +91,20 @@
         const cgpa = totalCredits ? (totalPoints / totalCredits).toFixed(2) : "N/A";
         document.getElementById("cgpa").innerText = cgpa;
 
-        // Build the course list table
-        const tableContent = courses.map(c => `
+        // Build Course Table
+        const tableRows = courses.map(c => `
           <tr>
             <td>${c.name}</td>
             <td>${c.code}</td>
             <td>${c.credit}</td>
             <td>${c.semester}</td>
             <td>${c.grade}</td>
-            <!-- Store course ID in data-id for event delegation -->
             <td><button class="delete-btn" data-id="${c.id}">Delete</button></td>
           </tr>
         `).join("");
-        document.getElementById("courseTable").innerHTML = tableContent;
+        document.getElementById("courseTable").innerHTML = tableRows;
 
-        // Build SGPA display for each semester
+        // Build SGPA Display
         const sgpaContent = Object.keys(semesterData).map(sem => {
           const data = semesterData[sem];
           const sgpa = data.credits ? (data.points / data.credits).toFixed(2) : "N/A";
@@ -121,7 +117,6 @@
       }
     }
 
-    /* 6) deleteCourse(): Remove a course from Supabase by ID */
     async function deleteCourse(id) {
       console.log("deleteCourse() called with ID:", id);
       try {
@@ -136,16 +131,13 @@
       }
     }
 
-    /* 7) Attach event listeners in JS (no inline HTML) */
     document.addEventListener("DOMContentLoaded", () => {
-      // a) Handle form submission for adding courses
       const courseForm = document.getElementById("courseForm");
       courseForm.addEventListener("submit", (e) => {
         e.preventDefault();
         addCourse();
       });
 
-      // b) Handle delete button clicks using event delegation
       const tableBody = document.getElementById("courseTable");
       tableBody.addEventListener("click", (e) => {
         if (e.target.classList.contains("delete-btn")) {
@@ -154,7 +146,6 @@
         }
       });
 
-      // c) Load courses on page load
       loadCourses();
     });
   </script>
@@ -170,6 +161,7 @@
 </head>
 <body>
   <h2>CGPA & SGPA Calculator (Supabase)</h2>
+  
   <form id="courseForm">
     <label for="courseName">Course Name:</label>
     <input type="text" id="courseName" required><br>
